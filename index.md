@@ -2,6 +2,8 @@
 
 Plays an asciinema cast file encoded in the URL
 
+* [🏠 live version](https://bitplane.net/dev/js/asciicast-url)
+
 <div id="status">It's not gonna work without JavaScript, is it?</div>
 <div id="error"></div>
 <div id="player-container" class="hidden"></div>
