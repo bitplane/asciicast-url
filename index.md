@@ -1,18 +1,15 @@
----
-layout: default
-title: Asciicast Player
----
-
 # 🎬 Asciicast Player
 
-<div id="status">Initializing player...</div>
+Plays an asciinema cast file encoded in the URL
+
+<div id="status">It's not gonna work without JavaScript, is it?</div>
 <div id="error"></div>
 <div id="player-container" class="hidden"></div>
 
 <div id="upload-container" class="hidden">
-    <h2>Upload or Paste Asciicast</h2>
+    <h2>Select or Paste Asciicast</h2>
     <input type="file" id="file-input" accept=".cast,.json">
-    <textarea id="asciicast-input" placeholder="Or paste your asciicast JSON here..." rows="10"></textarea>
+    <textarea id="asciicast-input" placeholder="Paste asciicast data here..." rows="10"></textarea>
     <button id="go-button">GO!</button>
     <div id="link-container" class="hidden">
         <p>Shareable link:</p>
@@ -22,6 +19,5 @@ title: Asciicast Player
 </div>
 
 <link rel="stylesheet" href="/assets/css/asciinema-player.css">
-<script src="/assets/js/xzwasm.min.js"></script>
 <script src="/assets/js/asciinema-player.min.js"></script>
 <script src="./asciicast-url.js"></script>
