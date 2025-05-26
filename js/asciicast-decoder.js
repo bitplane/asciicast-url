@@ -8,6 +8,7 @@ const asciicastInput = document.getElementById('asciicast-input');
 const goButton = document.getElementById('go-button');
 const linkContainer = document.getElementById('link-container');
 const shareLink = document.getElementById('share-link');
+const compressionStats = document.getElementById('compression-stats');
 
 // Base62 encoder/decoder implementation
 const BASE62_CHARS = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -54,20 +55,72 @@ function base62Decode(str) {
     return bytes;
 }
 
-// Gzip compression/decompression
-function gzipCompress(text) {
+// XZ compression/decompression
+async function xzCompress(text) {
     const encoder = new TextEncoder();
     const data = encoder.encode(text);
-    return pako.gzip(data);
+    
+    // Create a readable stream from the data
+    const inputStream = new ReadableStream({
+        start(controller) {
+            controller.enqueue(data);
+            controller.close();
+        }
+    });
+    
+    // Compress using xzwasm
+    const compressedStream = new xzwasm.XzReadableStream(inputStream, { preset: 9 }); // Use maximum compression
+    
+    // Read compressed data
+    const chunks = [];
+    const reader = compressedStream.getReader();
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+    }
+    
+    // Combine chunks
+    const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+    const result = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const chunk of chunks) {
+        result.set(chunk, offset);
+        offset += chunk.length;
+    }
+    
+    return result;
 }
 
-function gzipDecompress(data) {
+async function xzDecompress(data) {
     try {
-        const decompressed = pako.ungzip(data);
-        return new TextDecoder().decode(decompressed);
+        // Create a readable stream from the compressed data
+        const stream = new xzwasm.XzReadableStream(new Response(data).body);
+        
+        // Read all chunks from the stream
+        const chunks = [];
+        const reader = stream.getReader();
+        
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunks.push(value);
+        }
+        
+        // Combine all chunks into a single Uint8Array
+        const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+        const result = new Uint8Array(totalLength);
+        let offset = 0;
+        for (const chunk of chunks) {
+            result.set(chunk, offset);
+            offset += chunk.length;
+        }
+        
+        // Convert bytes to text
+        return new TextDecoder().decode(result);
     } catch (err) {
-        console.error("Gzip decompression failed:", err);
-        throw new Error(`Gzip decompression failed: ${err.message}`);
+        console.error("XZ decompression failed:", err);
+        throw new Error(`XZ decompression failed: ${err.message}`);
     }
 }
 
@@ -102,9 +155,14 @@ goButton.addEventListener('click', async () => {
         const firstLine = asciicastData.split('\n')[0];
         JSON.parse(firstLine);
         
-        // Compress with gzip
-        statusEl.textContent = 'Compressing data...';
-        const compressed = gzipCompress(asciicastData);
+        const originalSize = new TextEncoder().encode(asciicastData).length;
+        
+        // Compress with XZ
+        statusEl.textContent = 'Compressing data with XZ...';
+        const compressed = await xzCompress(asciicastData);
+        
+        const compressedSize = compressed.length;
+        const ratio = ((1 - compressedSize / originalSize) * 100).toFixed(1);
         
         // Encode to base62
         statusEl.textContent = 'Encoding data...';
@@ -116,6 +174,7 @@ goButton.addEventListener('click', async () => {
         
         shareLink.href = url.toString();
         shareLink.textContent = url.toString();
+        compressionStats.textContent = `Original: ${(originalSize/1024).toFixed(1)}KB → Compressed: ${(compressedSize/1024).toFixed(1)}KB (${ratio}% reduction)`;
         linkContainer.classList.remove('hidden');
         
         statusEl.textContent = 'Link generated! Click to play the asciicast.';
@@ -140,8 +199,8 @@ async function processAsciicast() {
         const decodedData = base62Decode(castParam);
         console.log('Decoded data:', decodedData.length, 'bytes');
         
-        statusEl.textContent = 'Decompressing gzip data...';
-        const decompressedText = gzipDecompress(decodedData);
+        statusEl.textContent = 'Decompressing XZ data...';
+        const decompressedText = await xzDecompress(decodedData);
         console.log('Decompressed text length:', decompressedText.length);
         
         statusEl.textContent = 'Processing asciicast data...';
