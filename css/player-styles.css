@@ -1,0 +1,40 @@
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #121212;
+    color: #f0f0f0;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.container {
+    max-width: 800px;
+    width: 100%;
+}
+
+#status {
+    color: #999;
+    margin-bottom: 10px;
+}
+
+#error {
+    color: #f55;
+    margin-bottom: 10px;
+    white-space: pre-wrap;
+}
+
+#player-container {
+    margin-top: 20px;
+    width: 100%;
+}
+
+#info {
+    margin-top: 20px;
+    color: #888;
+}
+
+.hidden {
+    display: none;
+}
